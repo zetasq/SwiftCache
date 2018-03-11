@@ -10,6 +10,9 @@
 		D423B1DC205579F400E06A58 /* SwiftCache.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D423B1D2205579F400E06A58 /* SwiftCache.framework */; };
 		D423B1E1205579F400E06A58 /* SwiftCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D423B1E0205579F400E06A58 /* SwiftCacheTests.swift */; };
 		D423B1E3205579F400E06A58 /* SwiftCache.h in Headers */ = {isa = PBXBuildFile; fileRef = D423B1D5205579F400E06A58 /* SwiftCache.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D423B1ED20557AC300E06A58 /* SwiftDiskCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = D423B1EC20557AC300E06A58 /* SwiftDiskCache.swift */; };
+		D45E5ABE205AA2060025C96F /* SwiftDiskCache+FileMetaData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45E5ABD205AA2060025C96F /* SwiftDiskCache+FileMetaData.swift */; };
+		D45E5AC0205AA9880025C96F /* SwiftDiskCache+_MetaDataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45E5ABF205AA9880025C96F /* SwiftDiskCache+_MetaDataStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -29,6 +32,9 @@
 		D423B1DB205579F400E06A58 /* SwiftCacheTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SwiftCacheTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D423B1E0205579F400E06A58 /* SwiftCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftCacheTests.swift; sourceTree = "<group>"; };
 		D423B1E2205579F400E06A58 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D423B1EC20557AC300E06A58 /* SwiftDiskCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDiskCache.swift; sourceTree = "<group>"; };
+		D45E5ABD205AA2060025C96F /* SwiftDiskCache+FileMetaData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SwiftDiskCache+FileMetaData.swift"; sourceTree = "<group>"; };
+		D45E5ABF205AA9880025C96F /* SwiftDiskCache+_MetaDataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SwiftDiskCache+_MetaDataStore.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -72,6 +78,7 @@
 			isa = PBXGroup;
 			children = (
 				D423B1D5205579F400E06A58 /* SwiftCache.h */,
+				D45E5AB8205A9B6D0025C96F /* DiskCache */,
 				D423B1D6205579F400E06A58 /* Info.plist */,
 			);
 			path = SwiftCache;
@@ -84,6 +91,16 @@
 				D423B1E2205579F400E06A58 /* Info.plist */,
 			);
 			path = SwiftCacheTests;
+			sourceTree = "<group>";
+		};
+		D45E5AB8205A9B6D0025C96F /* DiskCache */ = {
+			isa = PBXGroup;
+			children = (
+				D423B1EC20557AC300E06A58 /* SwiftDiskCache.swift */,
+				D45E5ABD205AA2060025C96F /* SwiftDiskCache+FileMetaData.swift */,
+				D45E5ABF205AA9880025C96F /* SwiftDiskCache+_MetaDataStore.swift */,
+			);
+			path = DiskCache;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -148,6 +165,7 @@
 				TargetAttributes = {
 					D423B1D1205579F400E06A58 = {
 						CreatedOnToolsVersion = 9.2;
+						LastSwiftMigration = 0920;
 						ProvisioningStyle = Automatic;
 					};
 					D423B1DA205579F400E06A58 = {
@@ -196,6 +214,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D423B1ED20557AC300E06A58 /* SwiftDiskCache.swift in Sources */,
+				D45E5ABE205AA2060025C96F /* SwiftDiskCache+FileMetaData.swift in Sources */,
+				D45E5AC0205AA9880025C96F /* SwiftDiskCache+_MetaDataStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -334,6 +355,7 @@
 		D423B1E7205579F400E06A58 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Automatic;
 				DEFINES_MODULE = YES;
@@ -347,6 +369,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.zetasq.SwiftCache;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 4.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -355,6 +378,7 @@
 		D423B1E8205579F400E06A58 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Automatic;
 				DEFINES_MODULE = YES;
@@ -376,6 +400,7 @@
 		D423B1EA205579F400E06A58 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = DHNJ8N28ZZ;
 				INFOPLIST_FILE = SwiftCacheTests/Info.plist;
@@ -390,6 +415,7 @@
 		D423B1EB205579F400E06A58 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = DHNJ8N28ZZ;
 				INFOPLIST_FILE = SwiftCacheTests/Info.plist;
