@@ -36,7 +36,7 @@ public final class SwiftDiskCache<ObjectType: Codable> {
   private let _trashSerialQueue: DispatchQueue
   private let _trashURL: URL
   
-  private var _metaDataStore: _CacheEntryStore<String, CacheEntry> = .init()
+  private var _cacheEntryStore: _CacheEntryStore<String, CacheEntry> = .init()
 
   private var _byteCount = 0
   
@@ -71,7 +71,7 @@ public final class SwiftDiskCache<ObjectType: Codable> {
     group.enter()
     DispatchQueue.global().async {
       self._locked_createCacheDirectory()
-      self._locked_setupMetaData()
+      self._locked_setupCacheEntries()
       group.leave()
     }
     
@@ -101,12 +101,12 @@ public final class SwiftDiskCache<ObjectType: Codable> {
     }
   }
   
-  private func _locked_setupMetaData() {
+  private func _locked_setupCacheEntries() {
     do {
       let resourceKeys: [URLResourceKey] = [.contentModificationDateKey, .totalFileAllocatedSizeKey]
       let fileURLs = try FileManager.default.contentsOfDirectory(at: cacheURL, includingPropertiesForKeys: resourceKeys, options: .skipsHiddenFiles)
       
-      var fileMetaDatas: [CacheEntry] = []
+      var cacheEntries: [CacheEntry] = []
       
       for fileURL in fileURLs {
         let resourceValues = try fileURL.resourceValues(forKeys: Set(resourceKeys))
@@ -115,20 +115,20 @@ public final class SwiftDiskCache<ObjectType: Codable> {
           continue
         }
         
-        fileMetaDatas.append(CacheEntry(url: fileURL, modifiedDate: modifiedDate, fileSize: fileSize))
+        cacheEntries.append(CacheEntry(url: fileURL, modifiedDate: modifiedDate, fileSize: fileSize))
       }
       
-      fileMetaDatas.sort(by: { $0.modifiedDate < $1.modifiedDate })
+      cacheEntries.sort(by: { $0.modifiedDate < $1.modifiedDate })
       
-      for metaData in fileMetaDatas {
-        let key = keyForCachedFileURL(metaData.url)
+      for entry in cacheEntries {
+        let key = keyForCachedFileURL(entry.url)
 
-        guard !_metaDataStore.containsValue(forKey: key) else {
+        guard !_cacheEntryStore.containsValue(forKey: key) else {
           continue
         }
         
-        _metaDataStore[key] = metaData
-        _byteCount += metaData.fileSize
+        _cacheEntryStore[key] = entry
+        _byteCount += entry.fileSize
       }
     } catch {
       os_log("%@", log: diskCacheLogger, type: .error, "Failed to read contents in cacheURL: \(self.cacheURL), error: \(error)")
@@ -147,13 +147,13 @@ public final class SwiftDiskCache<ObjectType: Codable> {
   // MARK: - Public methods
   public func asyncCheckObjectCached(forKey key: String, completion: @escaping (Bool) -> Void) {
     _concurrentWorkQueue.async {
-      completion(self._metaDataStore.containsValue(forKey: key))
+      completion(self._cacheEntryStore.containsValue(forKey: key))
     }
   }
   
   public func asyncFetchObject(forKey key: String, completion: @escaping (ObjectType?) -> Void) {
     _concurrentWorkQueue.async {
-      guard let fileMetaData = self._metaDataStore[key] else {
+      guard let entry = self._cacheEntryStore[key] else {
         completion(nil)
         return
       }
@@ -174,32 +174,50 @@ public final class SwiftDiskCache<ObjectType: Codable> {
       //      }
       
       do {
-        let data = try Data(contentsOf: fileMetaData.url)
+        let data = try Data(contentsOf: entry.url)
         let object = try JSONDecoder().decode(ObjectType.self, from: data)
         
         completion(object)
       } catch {
         completion(nil)
-        os_log("%@", log: diskCacheLogger, type: .error, "Failed to decode object from url: \(fileMetaData.url), error: \(error)")
+        os_log("%@", log: diskCacheLogger, type: .error, "Failed to decode object from url: \(entry.url), error: \(error)")
       }
     }
   }
   
-  public func asyncRemoveObject(forKey key: String) {
+  public func asyncRemoveObject(forKey key: String, completion: ((ObjectType?) -> Void)? = nil) {
     _concurrentWorkQueue.async(flags: .barrier) {
-      if let existingFileMetaData = self._metaDataStore.removeObject(forKey: key) {
-        self._locked_moveCachedFileToTrash(fileURL: existingFileMetaData.url)
-        self._byteCount -= existingFileMetaData.fileSize
+      guard let existingEntry = self._cacheEntryStore.removeObject(forKey: key) else {
+        completion?(nil)
+        return
+      }
+      
+      defer {
+        self._locked_moveCachedFileToTrash(fileURL: existingEntry.url)
+        self._byteCount -= existingEntry.fileSize
         self._clearTrash()
+      }
+      
+      guard let completion = completion else {
+        return
+      }
+      
+      do {
+        let data = try Data(contentsOf: existingEntry.url)
+        let object = try JSONDecoder().decode(ObjectType.self, from: data)
+        completion(object)
+      } catch {
+        os_log("%@", log: diskCacheLogger, type: .error, "Failed to decode object from url: \(existingEntry.url), error: \(error)")
+        completion(nil)
       }
     }
   }
   
   public func asyncSetObject(_ object: ObjectType, forKey key: String) {
     _concurrentWorkQueue.async(flags: .barrier) {
-      if let existingFileMetaData = self._metaDataStore.removeObject(forKey: key) {
-        self._locked_moveCachedFileToTrash(fileURL: existingFileMetaData.url)
-        self._byteCount -= existingFileMetaData.fileSize
+      if let existingEntry = self._cacheEntryStore.removeObject(forKey: key) {
+        self._locked_moveCachedFileToTrash(fileURL: existingEntry.url)
+        self._byteCount -= existingEntry.fileSize
         self._clearTrash()
       }
       
@@ -215,10 +233,10 @@ public final class SwiftDiskCache<ObjectType: Codable> {
             
             guard let modifiedDate = resourceValues.contentModificationDate, let fileSize = resourceValues.totalFileAllocatedSize else {
               os_log("%@", log: diskCacheLogger, type: .error, "Failed to read contentModificationDate and totalFileAllocatedSize from url: \(fileURL)")
-              try? FileManager.default.removeItem(at: fileURL) // prevent the cache directory is inconsistent with metaDataStore
+              try? FileManager.default.removeItem(at: fileURL) // prevent the cache directory is inconsistent with cacheEntryStore
               return
             }
-            self._metaDataStore[key] = CacheEntry(url: fileURL, modifiedDate: modifiedDate, fileSize: fileSize)
+            self._cacheEntryStore[key] = CacheEntry(url: fileURL, modifiedDate: modifiedDate, fileSize: fileSize)
             self._byteCount += fileSize
             self._locked_trimCacheIfNeeded()
           } catch {
@@ -241,8 +259,8 @@ public final class SwiftDiskCache<ObjectType: Codable> {
   
   func asyncClear() {
     _concurrentWorkQueue.async(flags: .barrier) {
-      while let existingFileMetaData = self._metaDataStore.popLast() {
-        self._locked_moveCachedFileToTrash(fileURL: existingFileMetaData.url)
+      while let entry = self._cacheEntryStore.popLast() {
+        self._locked_moveCachedFileToTrash(fileURL: entry.url)
       }
       self._byteCount = 0
       self._clearTrash()
@@ -254,7 +272,7 @@ public final class SwiftDiskCache<ObjectType: Codable> {
     let now = Date()
     
     let needsTrimCondition = {
-      return !self._metaDataStore.isEmpty && (self._byteCount > self.byteLimit || now.timeIntervalSince(self._metaDataStore.peekLastValue()!.modifiedDate) > self.ageLimit)
+      return !self._cacheEntryStore.isEmpty && (self._byteCount > self.byteLimit || now.timeIntervalSince(self._cacheEntryStore.peekLastValue()!.modifiedDate) > self.ageLimit)
     }
     
     guard needsTrimCondition() else {
@@ -262,10 +280,10 @@ public final class SwiftDiskCache<ObjectType: Codable> {
     }
     
     repeat {
-      let fileMetaData = _metaDataStore.popLast()!
-      _byteCount -= fileMetaData.fileSize
+      let entry = _cacheEntryStore.popLast()!
+      _byteCount -= entry.fileSize
       
-      _locked_moveCachedFileToTrash(fileURL: fileMetaData.url)
+      _locked_moveCachedFileToTrash(fileURL: entry.url)
     } while needsTrimCondition()
     
     _clearTrash()

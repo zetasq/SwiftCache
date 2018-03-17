@@ -15,6 +15,7 @@
 		D45E5AC0205AA9880025C96F /* _CacheEntryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45E5ABF205AA9880025C96F /* _CacheEntryStore.swift */; };
 		D45E5AC5205CA6D60025C96F /* SwiftMemoryCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45E5AC4205CA6D60025C96F /* SwiftMemoryCache.swift */; };
 		D45E5AC7205CC2A40025C96F /* SwiftMemoryCache+CacheEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45E5AC6205CC2A40025C96F /* SwiftMemoryCache+CacheEntry.swift */; };
+		D45E5AC9205D48520025C96F /* SwiftCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45E5AC8205D48520025C96F /* SwiftCache.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -39,6 +40,7 @@
 		D45E5ABF205AA9880025C96F /* _CacheEntryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = _CacheEntryStore.swift; sourceTree = "<group>"; };
 		D45E5AC4205CA6D60025C96F /* SwiftMemoryCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftMemoryCache.swift; sourceTree = "<group>"; };
 		D45E5AC6205CC2A40025C96F /* SwiftMemoryCache+CacheEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SwiftMemoryCache+CacheEntry.swift"; sourceTree = "<group>"; };
+		D45E5AC8205D48520025C96F /* SwiftCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftCache.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -83,9 +85,10 @@
 			children = (
 				D423B1D5205579F400E06A58 /* SwiftCache.h */,
 				D423B1D6205579F400E06A58 /* Info.plist */,
+				D45E5AC8205D48520025C96F /* SwiftCache.swift */,
+				D45E5ABF205AA9880025C96F /* _CacheEntryStore.swift */,
 				D45E5AC3205C9B160025C96F /* MemoryCache */,
 				D45E5AB8205A9B6D0025C96F /* DiskCache */,
-				D45E5ABF205AA9880025C96F /* _CacheEntryStore.swift */,
 			);
 			path = SwiftCache;
 			sourceTree = "<group>";
@@ -228,6 +231,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D45E5AC9205D48520025C96F /* SwiftCache.swift in Sources */,
 				D423B1ED20557AC300E06A58 /* SwiftDiskCache.swift in Sources */,
 				D45E5ABE205AA2060025C96F /* SwiftDiskCache+CacheEntry.swift in Sources */,
 				D45E5AC0205AA9880025C96F /* _CacheEntryStore.swift in Sources */,
