@@ -11,8 +11,10 @@
 		D423B1E1205579F400E06A58 /* SwiftCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D423B1E0205579F400E06A58 /* SwiftCacheTests.swift */; };
 		D423B1E3205579F400E06A58 /* SwiftCache.h in Headers */ = {isa = PBXBuildFile; fileRef = D423B1D5205579F400E06A58 /* SwiftCache.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D423B1ED20557AC300E06A58 /* SwiftDiskCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = D423B1EC20557AC300E06A58 /* SwiftDiskCache.swift */; };
-		D45E5ABE205AA2060025C96F /* SwiftDiskCache+FileMetaData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45E5ABD205AA2060025C96F /* SwiftDiskCache+FileMetaData.swift */; };
-		D45E5AC0205AA9880025C96F /* SwiftDiskCache+_MetaDataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45E5ABF205AA9880025C96F /* SwiftDiskCache+_MetaDataStore.swift */; };
+		D45E5ABE205AA2060025C96F /* SwiftDiskCache+CacheEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45E5ABD205AA2060025C96F /* SwiftDiskCache+CacheEntry.swift */; };
+		D45E5AC0205AA9880025C96F /* _CacheEntryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45E5ABF205AA9880025C96F /* _CacheEntryStore.swift */; };
+		D45E5AC5205CA6D60025C96F /* SwiftMemoryCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45E5AC4205CA6D60025C96F /* SwiftMemoryCache.swift */; };
+		D45E5AC7205CC2A40025C96F /* SwiftMemoryCache+CacheEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45E5AC6205CC2A40025C96F /* SwiftMemoryCache+CacheEntry.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -33,8 +35,10 @@
 		D423B1E0205579F400E06A58 /* SwiftCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftCacheTests.swift; sourceTree = "<group>"; };
 		D423B1E2205579F400E06A58 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D423B1EC20557AC300E06A58 /* SwiftDiskCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDiskCache.swift; sourceTree = "<group>"; };
-		D45E5ABD205AA2060025C96F /* SwiftDiskCache+FileMetaData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SwiftDiskCache+FileMetaData.swift"; sourceTree = "<group>"; };
-		D45E5ABF205AA9880025C96F /* SwiftDiskCache+_MetaDataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SwiftDiskCache+_MetaDataStore.swift"; sourceTree = "<group>"; };
+		D45E5ABD205AA2060025C96F /* SwiftDiskCache+CacheEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SwiftDiskCache+CacheEntry.swift"; sourceTree = "<group>"; };
+		D45E5ABF205AA9880025C96F /* _CacheEntryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = _CacheEntryStore.swift; sourceTree = "<group>"; };
+		D45E5AC4205CA6D60025C96F /* SwiftMemoryCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftMemoryCache.swift; sourceTree = "<group>"; };
+		D45E5AC6205CC2A40025C96F /* SwiftMemoryCache+CacheEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SwiftMemoryCache+CacheEntry.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -78,8 +82,10 @@
 			isa = PBXGroup;
 			children = (
 				D423B1D5205579F400E06A58 /* SwiftCache.h */,
-				D45E5AB8205A9B6D0025C96F /* DiskCache */,
 				D423B1D6205579F400E06A58 /* Info.plist */,
+				D45E5AC3205C9B160025C96F /* MemoryCache */,
+				D45E5AB8205A9B6D0025C96F /* DiskCache */,
+				D45E5ABF205AA9880025C96F /* _CacheEntryStore.swift */,
 			);
 			path = SwiftCache;
 			sourceTree = "<group>";
@@ -97,10 +103,18 @@
 			isa = PBXGroup;
 			children = (
 				D423B1EC20557AC300E06A58 /* SwiftDiskCache.swift */,
-				D45E5ABD205AA2060025C96F /* SwiftDiskCache+FileMetaData.swift */,
-				D45E5ABF205AA9880025C96F /* SwiftDiskCache+_MetaDataStore.swift */,
+				D45E5ABD205AA2060025C96F /* SwiftDiskCache+CacheEntry.swift */,
 			);
 			path = DiskCache;
+			sourceTree = "<group>";
+		};
+		D45E5AC3205C9B160025C96F /* MemoryCache */ = {
+			isa = PBXGroup;
+			children = (
+				D45E5AC4205CA6D60025C96F /* SwiftMemoryCache.swift */,
+				D45E5AC6205CC2A40025C96F /* SwiftMemoryCache+CacheEntry.swift */,
+			);
+			path = MemoryCache;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -215,8 +229,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				D423B1ED20557AC300E06A58 /* SwiftDiskCache.swift in Sources */,
-				D45E5ABE205AA2060025C96F /* SwiftDiskCache+FileMetaData.swift in Sources */,
-				D45E5AC0205AA9880025C96F /* SwiftDiskCache+_MetaDataStore.swift in Sources */,
+				D45E5ABE205AA2060025C96F /* SwiftDiskCache+CacheEntry.swift in Sources */,
+				D45E5AC0205AA9880025C96F /* _CacheEntryStore.swift in Sources */,
+				D45E5AC7205CC2A40025C96F /* SwiftMemoryCache+CacheEntry.swift in Sources */,
+				D45E5AC5205CA6D60025C96F /* SwiftMemoryCache.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

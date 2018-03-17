@@ -10,7 +10,7 @@ import Foundation
 
 extension SwiftDiskCache {
   
-  internal struct FileMetaData {
+  internal struct CacheEntry {
     
     internal let url: URL
     
