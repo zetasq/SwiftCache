@@ -44,7 +44,12 @@ public final class SwiftDiskCache<ObjectType> {
   private var _byteCount = 0
   
   // MARK: - Init & deinit
-  public init(cacheParentDirectory: URL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!, cacheName: String, byteLimit: Int = 50 * 1024 * 1024, ageLimit: TimeInterval = 30 * 24 * 60 * 60, objectEncoder: @escaping (ObjectType) throws -> Data, objectDecoder: @escaping (Data) throws -> ObjectType) {
+  public init(cacheParentDirectory: URL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!,
+              cacheName: String,
+              byteLimit: Int = 50 * 1024 * 1024,
+              ageLimit: TimeInterval = 30 * 24 * 60 * 60,
+              objectEncoder: @escaping (ObjectType) throws -> Data,
+              objectDecoder: @escaping (Data) throws -> ObjectType) {
     
     assert(!cacheName.isEmpty)
     assert(byteLimit > 0)

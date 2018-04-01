@@ -18,7 +18,14 @@ public final class SwiftCache<ObjectType> {
   private let diskCache: SwiftDiskCache<ObjectType>
   
   // MARK: - Init & deinit
-  public init(cacheName: String, memoryCacheCostLimit: Int, memoryCacheAgeLimit: TimeInterval, diskCacheParentDirectory: URL, diskCacheByteLimit: Int, diskCacheAgeLimit: TimeInterval, diskObjectEncoder: @escaping (ObjectType) throws -> Data, diskObjectDecoder: @escaping (Data) throws -> ObjectType) {
+  public init(cacheName: String,
+              memoryCacheCostLimit: Int,
+              memoryCacheAgeLimit: TimeInterval,
+              diskCacheParentDirectory: URL,
+              diskCacheByteLimit: Int,
+              diskCacheAgeLimit: TimeInterval,
+              diskObjectEncoder: @escaping (ObjectType) throws -> Data,
+              diskObjectDecoder: @escaping (Data) throws -> ObjectType) {
     self.cacheName = cacheName
     
     self.memoryCache = SwiftMemoryCache.init(cacheName: cacheName, costLimit: memoryCacheCostLimit, ageLimit: memoryCacheAgeLimit)

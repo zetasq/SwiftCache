@@ -24,7 +24,9 @@ public final class SwiftMemoryCache<ObjectType> {
   private var _cacheEntryStore: _CacheEntryStore<String, CacheEntry> = .init()
   
   // MARK: - Init & deinit
-  public init(cacheName: String, costLimit: Int = .max, ageLimit: TimeInterval = .greatestFiniteMagnitude) {
+  public init(cacheName: String,
+              costLimit: Int = .max,
+              ageLimit: TimeInterval = .greatestFiniteMagnitude) {
     self.cacheName = cacheName
     self.costLimit = costLimit
     self.ageLimit = ageLimit
