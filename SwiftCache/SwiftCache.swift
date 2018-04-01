@@ -8,7 +8,7 @@
 
 import Foundation
 
-public final class SwiftCache<ObjectType: Codable> {
+public final class SwiftCache<ObjectType> {
   
   // MARK: - Public properties
   public let cacheName: String
@@ -18,11 +18,11 @@ public final class SwiftCache<ObjectType: Codable> {
   private let diskCache: SwiftDiskCache<ObjectType>
   
   // MARK: - Init & deinit
-  public init(cacheName: String, memoryCacheCostLimit: Int, memoryCacheAgeLimit: TimeInterval, diskCacheParentDirectory: URL, diskCacheByteLimit: Int, diskCacheAgeLimit: TimeInterval) {
+  public init(cacheName: String, memoryCacheCostLimit: Int, memoryCacheAgeLimit: TimeInterval, diskCacheParentDirectory: URL, diskCacheByteLimit: Int, diskCacheAgeLimit: TimeInterval, diskObjectEncoder: @escaping (ObjectType) throws -> Data, diskObjectDecoder: @escaping (Data) throws -> ObjectType) {
     self.cacheName = cacheName
     
     self.memoryCache = SwiftMemoryCache.init(cacheName: cacheName, costLimit: memoryCacheCostLimit, ageLimit: memoryCacheAgeLimit)
-    self.diskCache = SwiftDiskCache(cacheParentDirectory: diskCacheParentDirectory, cacheName: cacheName, byteLimit: diskCacheByteLimit, ageLimit: diskCacheAgeLimit)
+    self.diskCache = SwiftDiskCache(cacheParentDirectory: diskCacheParentDirectory, cacheName: cacheName, byteLimit: diskCacheByteLimit, ageLimit: diskCacheAgeLimit, objectEncoder: diskObjectEncoder, objectDecoder: diskObjectDecoder)
   }
   
   // MARK: - Public methods

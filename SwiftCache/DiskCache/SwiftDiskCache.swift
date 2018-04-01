@@ -21,7 +21,7 @@ private let fileNameDecoder: (String) -> String = { fileName in
   return fileName.removingPercentEncoding!
 }
 
-public final class SwiftDiskCache<ObjectType: Codable> {
+public final class SwiftDiskCache<ObjectType> {
 
   // MARK: - Public properties
   public let cacheName: String
@@ -31,6 +31,9 @@ public final class SwiftDiskCache<ObjectType: Codable> {
   public let ageLimit: TimeInterval
   
   // MARK: - Private properties
+  private let objectEncoder: (ObjectType) throws -> Data
+  private let objectDecoder: (Data) throws -> ObjectType
+  
   private let _concurrentWorkQueue: DispatchQueue
     
   private let _trashSerialQueue: DispatchQueue
@@ -41,7 +44,8 @@ public final class SwiftDiskCache<ObjectType: Codable> {
   private var _byteCount = 0
   
   // MARK: - Init & deinit
-  public init(cacheParentDirectory: URL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!, cacheName: String, byteLimit: Int = 50 * 1024 * 1024, ageLimit: TimeInterval = 30 * 24 * 60 * 60) {
+  public init(cacheParentDirectory: URL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!, cacheName: String, byteLimit: Int = 50 * 1024 * 1024, ageLimit: TimeInterval = 30 * 24 * 60 * 60, objectEncoder: @escaping (ObjectType) throws -> Data, objectDecoder: @escaping (Data) throws -> ObjectType) {
+    
     assert(!cacheName.isEmpty)
     assert(byteLimit > 0)
     assert(ageLimit > 0)
@@ -50,6 +54,9 @@ public final class SwiftDiskCache<ObjectType: Codable> {
     self.cacheURL = cacheParentDirectory.appendingPathComponent(cacheName, isDirectory: true)
     self.byteLimit = byteLimit
     self.ageLimit = ageLimit
+    
+    self.objectEncoder = objectEncoder
+    self.objectDecoder = objectDecoder
     
     self._concurrentWorkQueue = DispatchQueue(label: "SwiftDiskCache::\(cacheName).underlyingQueue", attributes: .concurrent)
     self._concurrentWorkQueue.setTarget(queue: .global(qos: .default))
@@ -174,8 +181,8 @@ public final class SwiftDiskCache<ObjectType: Codable> {
       //      }
       
       do {
-        let data = try Data(contentsOf: entry.url)
-        let object = try JSONDecoder().decode(ObjectType.self, from: data)
+        let data = try Data(contentsOf: entry.url, options: .mappedIfSafe)
+        let object = try self.objectDecoder(data)
         
         completion(object)
       } catch {
@@ -204,7 +211,7 @@ public final class SwiftDiskCache<ObjectType: Codable> {
       
       do {
         let data = try Data(contentsOf: existingEntry.url)
-        let object = try JSONDecoder().decode(ObjectType.self, from: data)
+        let object = try self.objectDecoder(data)
         completion(object)
       } catch {
         os_log("%@", log: diskCacheLogger, type: .error, "Failed to decode object from url: \(existingEntry.url), error: \(error)")
@@ -222,7 +229,7 @@ public final class SwiftDiskCache<ObjectType: Codable> {
       }
       
       do {
-        let data = try JSONEncoder().encode(object)
+        let data = try self.objectEncoder(object)
         let fileURL = self.cachedFileURLForKey(key)
         
         do {
