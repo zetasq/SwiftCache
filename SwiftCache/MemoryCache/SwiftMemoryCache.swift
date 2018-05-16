@@ -17,7 +17,7 @@ public final class SwiftMemoryCache<ObjectType> {
   public let ageLimit: TimeInterval
   
   // MARK: - Private properties
-  private let lock = NSLock()
+  private var _lock = os_unfair_lock_s()
 
   private var _totalCost: Int = 0
   
@@ -36,48 +36,29 @@ public final class SwiftMemoryCache<ObjectType> {
   }
   
   // MARK: - Public methods
-  public func asyncCheckObjectCached(forKey key: String, completion: @escaping (Bool) -> Void) {
-    DispatchQueue.global().async {
-      completion(self.syncCheckObjectCached(forKey: key))
-    }
-  }
-  
-  public func syncCheckObjectCached(forKey key: String) -> Bool {
-    lock.lock()
+  public func checkObjectCached(forKey key: String) -> Bool {
+    os_unfair_lock_lock(&_lock)
     defer {
-      lock.unlock()
+      os_unfair_lock_unlock(&_lock)
     }
     
     return _cacheEntryStore.containsValue(forKey: key)
   }
   
-  public func asyncFetchObject(forKey key: String, completion: @escaping (ObjectType?) -> Void) {
-    DispatchQueue.global().async {
-      completion(self.syncFetchObject(forKey: key))
-    }
-  }
-  
-  public func syncFetchObject(forKey key: String) -> ObjectType? {
-    lock.lock()
+  public func fetchObject(forKey key: String) -> ObjectType? {
+    os_unfair_lock_lock(&_lock)
     defer {
-      lock.unlock()
+      os_unfair_lock_unlock(&_lock)
     }
     
     return _cacheEntryStore[key]?.object
   }
   
-  public func asyncRemoveObject(forKey key: String, completion: ((ObjectType?) -> Void)? = nil) {
-    DispatchQueue.global().async {
-      let object = self.syncRemoveObject(forKey: key)
-      completion?(object)
-    }
-  }
-  
   @discardableResult
-  public func syncRemoveObject(forKey key: String) -> ObjectType? {
-    lock.lock()
+  public func removeObject(forKey key: String) -> ObjectType? {
+    os_unfair_lock_lock(&_lock)
     defer {
-      lock.unlock()
+      os_unfair_lock_unlock(&_lock)
     }
     
     if let entry = _cacheEntryStore.removeObject(forKey: key) {
@@ -88,16 +69,10 @@ public final class SwiftMemoryCache<ObjectType> {
     }
   }
   
-  public func asyncSetObject(_ object: ObjectType, forKey key: String, cost: Int = 0) {
-    DispatchQueue.global().async {
-      self.syncSetObject(object, forKey: key, cost: cost)
-    }
-  }
-  
-  public func syncSetObject(_ object: ObjectType, forKey key: String, cost: Int = 0) {
-    lock.lock()
+  public func setObject(_ object: ObjectType, forKey key: String, cost: Int = 0) {
+    os_unfair_lock_lock(&_lock)
     defer {
-      lock.unlock()
+      os_unfair_lock_unlock(&_lock)
     }
     
     if let existingEntry = _cacheEntryStore.removeObject(forKey: key) {
@@ -111,41 +86,26 @@ public final class SwiftMemoryCache<ObjectType> {
     _locked_trimIfNeeded()
   }
   
-  public func asyncTrimIfNeeded() {
-    DispatchQueue.global().async {
-      self.lock.lock()
-      defer {
-        self.lock.unlock()
-      }
-      
-      self._locked_trimIfNeeded()
-    }
-  }
-  
-  public func syncTrimIfNeeded() {
-    lock.lock()
+  public func trimIfNeeded() {
+    os_unfair_lock_lock(&_lock)
     defer {
-      lock.unlock()
+      os_unfair_lock_unlock(&_lock)
     }
     
     _locked_trimIfNeeded()
   }
   
-  public func asyncClear() {
-    DispatchQueue.global().async {
-      self.syncClear()
-    }
-  }
   
-  public func syncClear() {
-    lock.lock()
+  public func clear() {
+    os_unfair_lock_lock(&_lock)
     defer {
-      lock.unlock()
+      os_unfair_lock_unlock(&_lock)
     }
+    
     _cacheEntryStore.removeAll()
     _totalCost = 0
   }
-
+  
   // MARK: - Private methods
   private func _locked_trimIfNeeded() {
     let now = Date()
@@ -159,12 +119,12 @@ public final class SwiftMemoryCache<ObjectType> {
   // MARK: - Notification handlers
   @objc
   private func applicationDidEnterBackground(_ notification: Notification) {
-    asyncClear()
+    clear()
   }
   
   @objc
   private func applicationDidReceiveMemoryWarning(_ notification: Notification) {
-    asyncClear()
+    clear()
   }
   
 }

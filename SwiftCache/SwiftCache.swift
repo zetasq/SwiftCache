@@ -34,54 +34,48 @@ public final class SwiftCache<ObjectType> {
   
   // MARK: - Public methods
   public func asyncCheckObjectCached(forKey key: String, completion: @escaping (Bool) -> Void) {
-    memoryCache.asyncCheckObjectCached(forKey: key) { cachedInMemory in
-      if cachedInMemory {
-        completion(true)
-      } else {
-        self.diskCache.asyncCheckObjectCached(forKey: key) { cachedInDisk in
-          completion(cachedInDisk)
-        }
+    if memoryCache.checkObjectCached(forKey: key) {
+      completion(true)
+    } else {
+      self.diskCache.asyncCheckObjectCached(forKey: key) { cachedInDisk in
+        completion(cachedInDisk)
       }
     }
   }
   
   public func asyncFetchObject(forKey key: String, completion: @escaping (ObjectType?) -> Void) {
-    memoryCache.asyncFetchObject(forKey: key) { objectInMemory in
-      if let object = objectInMemory {
-        completion(object)
-      } else {
-        self.diskCache.asyncFetchObject(forKey: key) { (objectInDisk) in
-          completion(objectInDisk)
-        }
+    if let objectInMemory = memoryCache.fetchObject(forKey: key) {
+      completion(objectInMemory)
+    } else {
+      self.diskCache.asyncFetchObject(forKey: key) { objectInDisk in
+        completion(objectInDisk)
       }
     }
   }
   
   public func asyncRemoveObject(forKey key: String, completion: ((ObjectType?) -> Void)? = nil) {
-    memoryCache.asyncRemoveObject(forKey: key) { removedObjectInMemory in
-      if let object = removedObjectInMemory {
-        self.diskCache.asyncRemoveObject(forKey: key)
-        completion?(object)
-      } else {
-        self.diskCache.asyncRemoveObject(forKey: key) { removedObjectInDisk in
-          completion?(removedObjectInDisk)
-        }
+    if let removedObjectInMemory = memoryCache.removeObject(forKey: key) {
+      self.diskCache.asyncRemoveObject(forKey: key)
+      completion?(removedObjectInMemory)
+    } else {
+      self.diskCache.asyncRemoveObject(forKey: key) { removedObjectInDisk in
+        completion?(removedObjectInDisk)
       }
     }
   }
   
   public func asyncSetObject(_ object: ObjectType, forKey key: String, memoryCacheCost: Int = 0) {
-    memoryCache.asyncSetObject(object, forKey: key, cost: memoryCacheCost)
+    memoryCache.setObject(object, forKey: key, cost: memoryCacheCost)
     diskCache.asyncSetObject(object, forKey: key)
   }
   
   public func asyncTrimIfNeeded() {
-    memoryCache.asyncTrimIfNeeded()
+    memoryCache.trimIfNeeded()
     diskCache.asyncTrimIfNeeded()
   }
   
   public func asyncClear() {
-    memoryCache.asyncClear()
+    memoryCache.clear()
     diskCache.asyncClear()
   }
   
