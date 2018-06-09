@@ -14,7 +14,7 @@ public final class SwiftCache<ObjectType> {
   public let cacheName: String
   
   // MARK: - Private properties
-  private let memoryCache: SwiftMemoryCache<ObjectType>
+  private let memoryCache: SwiftMemoryCache<String, ObjectType>
   private let diskCache: SwiftDiskCache<ObjectType>
   
   // MARK: - Init & deinit

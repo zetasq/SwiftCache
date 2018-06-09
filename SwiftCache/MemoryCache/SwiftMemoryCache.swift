@@ -8,7 +8,7 @@
 
 import Foundation
 
-public final class SwiftMemoryCache<ObjectType> {
+public final class SwiftMemoryCache<KeyType: Hashable, ObjectType> {
   
   // MARK: - Public properties
   public let cacheName: String
@@ -21,7 +21,7 @@ public final class SwiftMemoryCache<ObjectType> {
 
   private var _totalCost: Int = 0
   
-  private var _cacheEntryStore: _CacheEntryStore<String, CacheEntry> = .init()
+  private var _cacheEntryStore: _CacheEntryStore<KeyType, CacheEntry> = .init()
   
   // MARK: - Init & deinit
   public init(cacheName: String,
@@ -36,7 +36,7 @@ public final class SwiftMemoryCache<ObjectType> {
   }
   
   // MARK: - Public methods
-  public func checkObjectCached(forKey key: String) -> Bool {
+  public func checkObjectCached(forKey key: KeyType) -> Bool {
     os_unfair_lock_lock(&_lock)
     defer {
       os_unfair_lock_unlock(&_lock)
@@ -45,7 +45,7 @@ public final class SwiftMemoryCache<ObjectType> {
     return _cacheEntryStore.containsValue(forKey: key)
   }
   
-  public func fetchObject(forKey key: String) -> ObjectType? {
+  public func fetchObject(forKey key: KeyType) -> ObjectType? {
     os_unfair_lock_lock(&_lock)
     defer {
       os_unfair_lock_unlock(&_lock)
@@ -55,7 +55,7 @@ public final class SwiftMemoryCache<ObjectType> {
   }
   
   @discardableResult
-  public func removeObject(forKey key: String) -> ObjectType? {
+  public func removeObject(forKey key: KeyType) -> ObjectType? {
     os_unfair_lock_lock(&_lock)
     defer {
       os_unfair_lock_unlock(&_lock)
@@ -69,7 +69,7 @@ public final class SwiftMemoryCache<ObjectType> {
     }
   }
   
-  public func setObject(_ object: ObjectType, forKey key: String, cost: Int = 0) {
+  public func setObject(_ object: ObjectType, forKey key: KeyType, cost: Int = 0) {
     os_unfair_lock_lock(&_lock)
     defer {
       os_unfair_lock_unlock(&_lock)
