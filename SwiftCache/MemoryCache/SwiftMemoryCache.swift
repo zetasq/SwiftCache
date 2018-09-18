@@ -31,8 +31,8 @@ public final class SwiftMemoryCache<KeyType: Hashable, ObjectType> {
     self.costLimit = costLimit
     self.ageLimit = ageLimit
     
-    NotificationCenter.default.addObserver(self, selector: #selector(self.applicationDidEnterBackground(_:)), name: .UIApplicationDidEnterBackground, object: nil)
-    NotificationCenter.default.addObserver(self, selector: #selector(self.applicationDidReceiveMemoryWarning(_:)), name: .UIApplicationDidReceiveMemoryWarning, object: nil)
+    NotificationCenter.default.addObserver(self, selector: #selector(self.applicationDidEnterBackground(_:)), name: UIApplication.didEnterBackgroundNotification, object: nil)
+    NotificationCenter.default.addObserver(self, selector: #selector(self.applicationDidReceiveMemoryWarning(_:)), name: UIApplication.didReceiveMemoryWarningNotification, object: nil)
   }
   
   // MARK: - Public methods
