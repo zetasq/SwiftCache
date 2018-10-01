@@ -178,15 +178,16 @@ public final class SwiftDiskCache<ObjectType> {
         return
       }
       
+      var object: ObjectType?
+      
       do {
         let data = try Data(contentsOf: entry.url, options: .mappedIfSafe)
-        let object = try self.objectDecoder(data)
-        
-        completion(object)
+        object = try self.objectDecoder(data)
       } catch {
         os_log("%@", log: diskCacheLogger, type: .error, "Failed to decode object from url: \(entry.url), error: \(error)")
-        completion(nil)
       }
+      
+      completion(object)
     }
   }
   
@@ -226,14 +227,16 @@ public final class SwiftDiskCache<ObjectType> {
         return
       }
       
+      var object: ObjectType?
+      
       do {
         let data = try Data(contentsOf: existingEntry.url, options: .mappedIfSafe)
-        let object = try self.objectDecoder(data)
-        completion(object)
+        object = try self.objectDecoder(data)
       } catch {
         os_log("%@", log: diskCacheLogger, type: .error, "Failed to decode object from url: \(existingEntry.url), error: \(error)")
-        completion(nil)
       }
+      
+      completion(object)
     }
   }
   
@@ -313,7 +316,7 @@ public final class SwiftDiskCache<ObjectType> {
     }
   }
   
-  public func asyncLinkFileURL(_ fileURL: URL, forKey key: String) {
+  public func asyncLinkFileURL(_ fileURL: URL, forKey key: String, completion: @escaping (ObjectType?) -> Void) {
     assert(fileURL.isFileURL)
     assert(ObjectType.self == Data.self)
     
@@ -326,20 +329,34 @@ public final class SwiftDiskCache<ObjectType> {
       
       let cachedFileURL = self.cachedFileURLForKey(key)
       
+      var object: ObjectType?
+      
       do {
         try FileManager.default.linkItem(at: fileURL, to: cachedFileURL)
         
         self._locked_add(cachedFileURL: cachedFileURL, toCacheEntryStoreWithKey: key)
+        
+        do {
+          let data = try Data(contentsOf: cachedFileURL, options: .mappedIfSafe)
+          object = try self.objectDecoder(data)
+        } catch {
+          os_log("%@", log: diskCacheLogger, type: .error, "Failed to decode object from url: \(cachedFileURL), error: \(error)")
+        }
       } catch {
         os_log("%@", log: diskCacheLogger, type: .error, "Failed to link file at: \(fileURL), to: \(cachedFileURL), error: \(error)")
       }
+      
+      completion(object)
     }
   }
   
-  public func syncLinkFileURL(_ fileURL: URL, forKey key: String) {
+  @discardableResult
+  public func syncLinkFileURL(_ fileURL: URL, forKey key: String) -> ObjectType? {
     assert(fileURL.isFileURL)
     assert(ObjectType.self == Data.self)
     
+    var object: ObjectType?
+
     _concurrentWorkQueue.sync(flags: .barrier) {
       if let existingEntry = self._cacheEntryStore.removeObject(forKey: key) {
         self._locked_moveCachedFileToTrash(fileURL: existingEntry.url)
@@ -353,10 +370,19 @@ public final class SwiftDiskCache<ObjectType> {
         try FileManager.default.linkItem(at: fileURL, to: cachedFileURL)
         
         self._locked_add(cachedFileURL: cachedFileURL, toCacheEntryStoreWithKey: key)
+
+        do {
+          let data = try Data(contentsOf: cachedFileURL, options: .mappedIfSafe)
+          object = try self.objectDecoder(data)
+        } catch {
+          os_log("%@", log: diskCacheLogger, type: .error, "Failed to decode object from url: \(cachedFileURL), error: \(error)")
+        }
       } catch {
         os_log("%@", log: diskCacheLogger, type: .error, "Failed to link file at: \(fileURL), to: \(cachedFileURL), error: \(error)")
       }
     }
+    
+    return object
   }
   
   func asyncTrimIfNeeded() {
