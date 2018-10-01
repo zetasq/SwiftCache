@@ -63,9 +63,9 @@ public final class SwiftDiskCache<ObjectType> {
     self.objectEncoder = objectEncoder
     self.objectDecoder = objectDecoder
     
-    self._concurrentWorkQueue = DispatchQueue(label: "SwiftDiskCache::\(cacheName).underlyingQueue", attributes: .concurrent, target: .global(qos: .default))
+    self._concurrentWorkQueue = DispatchQueue(label: "SwiftDiskCache::underlyingQueue (\(cacheName))", attributes: .concurrent, target: .global(qos: .default))
     
-    self._trashSerialQueue = DispatchQueue(label: "SwiftDiskCache::\(cacheName).trashQueue", target: .global(qos: .background))
+    self._trashSerialQueue = DispatchQueue(label: "SwiftDiskCache::trashQueue (\(cacheName))", target: .global(qos: .background))
     self._trashURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     
     setup()
