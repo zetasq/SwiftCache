@@ -168,29 +168,14 @@ public final class SwiftDiskCache<ObjectType> {
         return
       }
       
-      // We don't extend the lifetime of the cached object now.
-      
-      //      defer {
-      //        self._concurrentWorkQueue.async(flags: .barrier) {
-      //          let newFileMetaData = FileMetaData(url: fileMetaData.url, modifiedDate: Date(), fileSize: fileMetaData.fileSize)
-      //
-      //          do {
-      //            try FileManager.default.setAttributes([.modificationDate: newFileMetaData.modifiedDate], ofItemAtPath: newFileMetaData.url.path)
-      //            self._storage[key] = newFileMetaData
-      //          } catch {
-      //            os_log("%@", log: diskCacheLogger, type: .error, "Failed to change modificationDate for url: \(newFileMetaData.url), error: \(error)")
-      //          }
-      //        }
-      //      }
-      
       do {
         let data = try Data(contentsOf: entry.url, options: .mappedIfSafe)
         let object = try self.objectDecoder(data)
         
         completion(object)
       } catch {
-        completion(nil)
         os_log("%@", log: diskCacheLogger, type: .error, "Failed to decode object from url: \(entry.url), error: \(error)")
+        completion(nil)
       }
     }
   }
@@ -213,7 +198,7 @@ public final class SwiftDiskCache<ObjectType> {
       }
       
       do {
-        let data = try Data(contentsOf: existingEntry.url)
+        let data = try Data(contentsOf: existingEntry.url, options: .mappedIfSafe)
         let object = try self.objectDecoder(data)
         completion(object)
       } catch {
@@ -233,30 +218,40 @@ public final class SwiftDiskCache<ObjectType> {
       
       do {
         let data = try self.objectEncoder(object)
-        let fileURL = self.cachedFileURLForKey(key)
+        let cachedFileURL = self.cachedFileURLForKey(key)
         
         do {
-          try data.write(to: fileURL)
+          try data.write(to: cachedFileURL)
           
-          do {
-            let resourceValues = try fileURL.resourceValues(forKeys: [.contentModificationDateKey, .totalFileAllocatedSizeKey])
-            
-            guard let modifiedDate = resourceValues.contentModificationDate, let fileSize = resourceValues.totalFileAllocatedSize else {
-              os_log("%@", log: diskCacheLogger, type: .error, "Failed to read contentModificationDate and totalFileAllocatedSize from url: \(fileURL)")
-              try? FileManager.default.removeItem(at: fileURL) // prevent the cache directory is inconsistent with cacheEntryStore
-              return
-            }
-            self._cacheEntryStore[key] = CacheEntry(url: fileURL, modifiedDate: modifiedDate, fileSize: fileSize)
-            self._byteCount += fileSize
-            self._locked_trimCacheIfNeeded()
-          } catch {
-            os_log("%@", log: diskCacheLogger, type: .error, "Failed to get resource values from url: \(fileURL), error: \(error)")
-          }
+          self._locked_add(cachedFileURL: cachedFileURL, toCacheEntryStoreWithKey: key)
         } catch {
-          os_log("%@", log: diskCacheLogger, type: .error, "Failed to write encoded object: \(object), to url: \(fileURL), error: \(error)")
+          os_log("%@", log: diskCacheLogger, type: .error, "Failed to write encoded object: \(object), to url: \(cachedFileURL), error: \(error)")
         }
       } catch {
         os_log("%@", log: diskCacheLogger, type: .error, "Failed to encode object: \(object), error: \(error)")
+      }
+    }
+  }
+  
+  public func asyncLinkFileURL(_ fileURL: URL, forKey key: String) {
+    assert(fileURL.isFileURL)
+    assert(ObjectType.self == Data.self)
+    
+    _concurrentWorkQueue.async(flags: .barrier) {
+      if let existingEntry = self._cacheEntryStore.removeObject(forKey: key) {
+        self._locked_moveCachedFileToTrash(fileURL: existingEntry.url)
+        self._byteCount -= existingEntry.fileSize
+        self._clearTrash()
+      }
+      
+      let cachedFileURL = self.cachedFileURLForKey(key)
+      
+      do {
+        try FileManager.default.linkItem(at: fileURL, to: cachedFileURL)
+        
+        self._locked_add(cachedFileURL: cachedFileURL, toCacheEntryStoreWithKey: key)
+      } catch {
+        os_log("%@", log: diskCacheLogger, type: .error, "Failed to link file at: \(fileURL), to: \(cachedFileURL), error: \(error)")
       }
     }
   }
@@ -278,6 +273,35 @@ public final class SwiftDiskCache<ObjectType> {
   }
   
   // MARK: - Helper methods
+  private func keyForCachedFileURL(_ url: URL) -> String {
+    let fileName = url.lastPathComponent
+    return fileNameDecoder(fileName)
+  }
+  
+  private func cachedFileURLForKey(_ key: String) -> URL {
+    assert(!key.isEmpty)
+    
+    return cacheURL.appendingPathComponent(fileNameEncoder(key), isDirectory: false)
+  }
+  
+  private func _locked_add(cachedFileURL: URL, toCacheEntryStoreWithKey key: String) {
+    do {
+      let resourceValues = try cachedFileURL.resourceValues(forKeys: [.contentModificationDateKey, .totalFileAllocatedSizeKey])
+      
+      guard let modifiedDate = resourceValues.contentModificationDate, let fileSize = resourceValues.totalFileAllocatedSize else {
+        os_log("%@", log: diskCacheLogger, type: .error, "Failed to read contentModificationDate and totalFileAllocatedSize from url: \(cachedFileURL)")
+        try? FileManager.default.removeItem(at: cachedFileURL) // prevent the cache directory is inconsistent with cacheEntryStore
+        return
+      }
+      
+      self._cacheEntryStore[key] = CacheEntry(url: cachedFileURL, modifiedDate: modifiedDate, fileSize: fileSize)
+      self._byteCount += fileSize
+      self._locked_trimCacheIfNeeded()
+    } catch {
+      os_log("%@", log: diskCacheLogger, type: .error, "Failed to get resource values from url: \(cachedFileURL), error: \(error)")
+    }
+  }
+  
   private func _locked_trimCacheIfNeeded() {
     let now = Date()
     
@@ -297,17 +321,6 @@ public final class SwiftDiskCache<ObjectType> {
     } while needsTrimCondition()
     
     _clearTrash()
-  }
-  
-  private func keyForCachedFileURL(_ url: URL) -> String {
-    let fileName = url.lastPathComponent
-    return fileNameDecoder(fileName)
-  }
-  
-  private func cachedFileURLForKey(_ key: String) -> URL {
-    assert(!key.isEmpty)
-    
-    return cacheURL.appendingPathComponent(fileNameEncoder(key), isDirectory: false)
   }
   
   private func _locked_moveCachedFileToTrash(fileURL: URL) {
