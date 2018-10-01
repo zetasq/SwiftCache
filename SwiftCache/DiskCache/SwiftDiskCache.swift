@@ -161,6 +161,16 @@ public final class SwiftDiskCache<ObjectType> {
     }
   }
   
+  public func syncCheckObjectCached(forKey key: String) -> Bool {
+    var isObjectCached = false
+    
+    _concurrentWorkQueue.sync {
+      isObjectCached = self._cacheEntryStore.containsValue(forKey: key)
+    }
+    
+    return isObjectCached
+  }
+  
   public func asyncFetchObject(forKey key: String, completion: @escaping (ObjectType?) -> Void) {
     _concurrentWorkQueue.async {
       guard let entry = self._cacheEntryStore[key] else {
@@ -178,6 +188,25 @@ public final class SwiftDiskCache<ObjectType> {
         completion(nil)
       }
     }
+  }
+  
+  public func syncFetchObject(forKey key: String) -> ObjectType? {
+    var object: ObjectType?
+    
+    _concurrentWorkQueue.sync {
+      guard let entry = self._cacheEntryStore[key] else {
+        return
+      }
+      
+      do {
+        let data = try Data(contentsOf: entry.url, options: .mappedIfSafe)
+        object = try self.objectDecoder(data)
+      } catch {
+        os_log("%@", log: diskCacheLogger, type: .error, "Failed to decode object from url: \(entry.url), error: \(error)")
+      }
+    }
+    
+    return object
   }
   
   public func asyncRemoveObject(forKey key: String, completion: ((ObjectType?) -> Void)? = nil) {
@@ -208,8 +237,59 @@ public final class SwiftDiskCache<ObjectType> {
     }
   }
   
+  @discardableResult
+  public func syncRemoveObject(forKey key: String) -> ObjectType? {
+    var object: ObjectType?
+    
+    _concurrentWorkQueue.sync(flags: .barrier) {
+      guard let existingEntry = self._cacheEntryStore.removeObject(forKey: key) else {
+        return
+      }
+      
+      defer {
+        self._locked_moveCachedFileToTrash(fileURL: existingEntry.url)
+        self._byteCount -= existingEntry.fileSize
+        self._clearTrash()
+      }
+      
+      do {
+        let data = try Data(contentsOf: existingEntry.url, options: .mappedIfSafe)
+        object = try self.objectDecoder(data)
+      } catch {
+        os_log("%@", log: diskCacheLogger, type: .error, "Failed to decode object from url: \(existingEntry.url), error: \(error)")
+      }
+    }
+    
+    return object
+  }
+  
   public func asyncSetObject(_ object: ObjectType, forKey key: String) {
     _concurrentWorkQueue.async(flags: .barrier) {
+      if let existingEntry = self._cacheEntryStore.removeObject(forKey: key) {
+        self._locked_moveCachedFileToTrash(fileURL: existingEntry.url)
+        self._byteCount -= existingEntry.fileSize
+        self._clearTrash()
+      }
+      
+      do {
+        let data = try self.objectEncoder(object)
+        let cachedFileURL = self.cachedFileURLForKey(key)
+        
+        do {
+          try data.write(to: cachedFileURL)
+          
+          self._locked_add(cachedFileURL: cachedFileURL, toCacheEntryStoreWithKey: key)
+        } catch {
+          os_log("%@", log: diskCacheLogger, type: .error, "Failed to write encoded object: \(object), to url: \(cachedFileURL), error: \(error)")
+        }
+      } catch {
+        os_log("%@", log: diskCacheLogger, type: .error, "Failed to encode object: \(object), error: \(error)")
+      }
+    }
+  }
+  
+  public func syncSetObject(_ object: ObjectType, forKey key: String) {
+    _concurrentWorkQueue.sync(flags: .barrier) {
       if let existingEntry = self._cacheEntryStore.removeObject(forKey: key) {
         self._locked_moveCachedFileToTrash(fileURL: existingEntry.url)
         self._byteCount -= existingEntry.fileSize
@@ -238,6 +318,29 @@ public final class SwiftDiskCache<ObjectType> {
     assert(ObjectType.self == Data.self)
     
     _concurrentWorkQueue.async(flags: .barrier) {
+      if let existingEntry = self._cacheEntryStore.removeObject(forKey: key) {
+        self._locked_moveCachedFileToTrash(fileURL: existingEntry.url)
+        self._byteCount -= existingEntry.fileSize
+        self._clearTrash()
+      }
+      
+      let cachedFileURL = self.cachedFileURLForKey(key)
+      
+      do {
+        try FileManager.default.linkItem(at: fileURL, to: cachedFileURL)
+        
+        self._locked_add(cachedFileURL: cachedFileURL, toCacheEntryStoreWithKey: key)
+      } catch {
+        os_log("%@", log: diskCacheLogger, type: .error, "Failed to link file at: \(fileURL), to: \(cachedFileURL), error: \(error)")
+      }
+    }
+  }
+  
+  public func syncLinkFileURL(_ fileURL: URL, forKey key: String) {
+    assert(fileURL.isFileURL)
+    assert(ObjectType.self == Data.self)
+    
+    _concurrentWorkQueue.sync(flags: .barrier) {
       if let existingEntry = self._cacheEntryStore.removeObject(forKey: key) {
         self._locked_moveCachedFileToTrash(fileURL: existingEntry.url)
         self._byteCount -= existingEntry.fileSize
@@ -327,12 +430,15 @@ public final class SwiftDiskCache<ObjectType> {
     let fileName = fileURL.lastPathComponent
     let targetURL = self._trashURL.appendingPathComponent(fileName, isDirectory: false)
     
-    try? FileManager.default.linkItem(at: fileURL, to: targetURL) // We don't catch error because file may exist at targetURL
-
     do {
-      try FileManager.default.removeItem(at: fileURL)
+      try FileManager.default.moveItem(at: fileURL, to: targetURL)
     } catch {
-      os_log("%@", log: diskCacheLogger, type: .error, "Failed to remove file at \(fileURL), error: \(error)")
+      // If we failed to move, we should always remove file at fileURL
+      do {
+        try FileManager.default.removeItem(at: fileURL)
+      } catch {
+        os_log("%@", log: diskCacheLogger, type: .error, "Failed to remove file at \(fileURL), error: \(error)")
+      }
     }
   }
     
